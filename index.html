@@ -1,77 +1,78 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>উপজেলা ভ্রমণ</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f0f8f4;
-      color: #174d3b;
-      text-align: center;
-    }
-    header {
-      background: #087653;
-      color: white;
-      padding: 25px 12px;
-    }
-    h1 { margin: 0; }
-    main {
-      max-width: 600px;
-      margin: 30px auto;
-      padding: 20px;
-    }
-    .card {
-      background: white;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 3px 12px #0001;
-    }
-    input, button {
-      box-sizing: border-box;
-      width: 100%;
-      padding: 12px;
-      margin-top: 12px;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    input { border: 1px solid #aaa; }
-    button {
-      background: #087653;
-      color: white;
-      border: 0;
-      cursor: pointer;
-    }
-    #result { margin-top: 18px; line-height: 1.8; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>আমার বাংলাদেশ ভ্রমণ</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f0f7f2;margin:0;color:#173b2b}
+header{background:#087443;color:white;text-align:center;padding:25px 12px}
+main{max-width:700px;margin:20px auto;padding:15px}
+.box{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #ccc}
+input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border-radius:7px;font-size:16px}
+input{border:1px solid #aaa}
+button{background:#087443;color:white;border:0;cursor:pointer}
+.item{padding:12px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:10px}
+.item input{width:20px;margin:0}
+.small{color:#555;font-size:14px}
+</style>
 </head>
 <body>
-  <header>
-    <h1>🇧🇩 উপজেলা ভ্রমণ</h1>
-    <p>ঘুরে দেখি আমাদের বাংলাদেশ</p>
-  </header>
-  <main>
-    <div class="card">
-      <h2>আমার ভ্রমণ শুরু হোক!</h2>
-      <p>তোমার পছন্দের উপজেলার নাম লেখো।</p>
-      <input id="upazila" placeholder="যেমন: গোলাপগঞ্জ">
-      <button onclick="searchUpazila()">উপজেলা খুঁজুন</button>
-      <div id="result"></div>
-    </div>
-  </main>
-  <script>
-    function searchUpazila() {
-      const name = document.getElementById('upazila').value.trim();
-      const result = document.getElementById('result');
-      if (!name) {
-        result.textContent = 'আগে একটি উপজেলার নাম লেখো।';
-        return;
-      }
-      result.textContent = 'তুমি "' + name +
-        '" উপজেলা খুঁজেছ! শিগগিরই এখানে সম্পূর্ণ তালিকা যুক্ত হবে।';
-    }
-  </script>
+<header>
+<h1>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h1>
+<p>উপজেলা ভ্রমণের হিসাব রাখুন</p>
+</header>
+<main>
+<div class="box">
+<h2>আমার ভ্রমণ তালিকা</h2>
+<p class="small">উপজেলার নাম লিখে যোগ করুন। ভ্রমণ করা হলে টিক দিন।</p>
+<input id="name" placeholder="উপজেলার নাম লিখুন">
+<button onclick="addPlace()">উপজেলা যোগ করুন</button>
+<input id="search" placeholder="তালিকায় খুঁজুন..." oninput="showPlaces()">
+<p id="count">ভ্রমণ করেছেন: ০টি</p>
+<div id="list"></div>
+<button onclick="clearAll()">তালিকা মুছুন</button>
+<p class="small">এই প্রাথমিক সংস্করণে তালিকা এই ব্রাউজারেই সংরক্ষিত হবে।</p>
+</div>
+</main>
+<script>
+let places=JSON.parse(localStorage.getItem("travelPlaces")||"[]");
+function save(){localStorage.setItem("travelPlaces",JSON.stringify(places));showPlaces();}
+function addPlace(){
+let input=document.getElementById("name");
+let name=input.value.trim();
+if(!name){alert("উপজেলার নাম লিখুন");return;}
+if(places.some(p=>p.name===name)){alert("এই নামটি তালিকায় আছে");return;}
+places.push({name:name,visited:false});
+input.value="";
+save();
+}
+function showPlaces(){
+let q=document.getElementById("search").value.trim().toLowerCase();
+let list=document.getElementById("list");
+list.innerHTML="";
+places.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
+let row=document.createElement("div");
+row.className="item";
+let check=document.createElement("input");
+check.type="checkbox";
+check.checked=p.visited;
+check.onchange=()=>{p.visited=check.checked;save();};
+let label=document.createElement("span");
+label.textContent=p.name;
+if(p.visited)label.style.textDecoration="line-through";
+row.append(check,label);
+list.appendChild(row);
+});
+document.getElementById("count").textContent=
+"ভ্রমণ করেছেন: "+places.filter(p=>p.visited).length+"টি / মোট "+places.length+"টি";
+}
+function clearAll(){
+if(confirm("আপনার সব যোগ করা উপজেলা মুছবেন?")){
+places=[];save();
+}
+}
+showPlaces();
+</script>
 </body>
 </html>
