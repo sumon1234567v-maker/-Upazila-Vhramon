@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>উপজেলা ভ্রমণ</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f8f4;
+      color: #174d3b;
+      text-align: center;
+    }
+    header {
+      background: #087653;
+      color: white;
+      padding: 25px 12px;
+    }
+    h1 { margin: 0; }
+    main {
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 3px 12px #0001;
+    }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    input { border: 1px solid #aaa; }
+    button {
+      background: #087653;
+      color: white;
+      border: 0;
+      cursor: pointer;
+    }
+    #result { margin-top: 18px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🇧🇩 উপজেলা ভ্রমণ</h1>
+    <p>ঘুরে দেখি আমাদের বাংলাদেশ</p>
+  </header>
+  <main>
+    <div class="card">
+      <h2>আমার ভ্রমণ শুরু হোক!</h2>
+      <p>তোমার পছন্দের উপজেলার নাম লেখো।</p>
+      <input id="upazila" placeholder="যেমন: গোলাপগঞ্জ">
+      <button onclick="searchUpazila()">উপজেলা খুঁজুন</button>
+      <div id="result"></div>
+    </div>
+  </main>
+  <script>
+    function searchUpazila() {
+      const name = document.getElementById('upazila').value.trim();
+      const result = document.getElementById('result');
+      if (!name) {
+        result.textContent = 'আগে একটি উপজেলার নাম লেখো।';
+        return;
+      }
+      result.textContent = 'তুমি "' + name +
+        '" উপজেলা খুঁজেছ! শিগগিরই এখানে সম্পূর্ণ তালিকা যুক্ত হবে।';
+    }
+  </script>
+</body>
+</html>
