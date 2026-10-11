@@ -1,70 +1,134 @@
 <!DOCTYPE html>
 <html lang="bn">
-<head>fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upazila.Gopalganj)
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>বাংলাদেশ উপজেলা ভ্রমণ মানচিত্র</title>
+<title>আমার বাংলাদেশ ভ্রমণ মানচিত্র</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#f0f7f2;color:#173b2b}
-header{background:#087443;color:white;text-align:center;padding:15px}
-main{max-width:900px;margin:auto;padding:15px}
-input,button{padding:12px;font-size:16px;box-sizing:border-box}
-input{width:100%;margin-bottom:8px;border:1px solid #aaa;border-radius:5px}
-button{cursor:pointer;background:#087443;color:white;border:0;border-radius:5px}
-#results button{display:block;width:100%;margin:4px 0;text-align:left}
-#map{height:65vh;min-height:350px;border:2px solid #087443;border-radius:8px}
-#status{background:white;padding:10px;border-radius:5px}
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f0f7f2;
+  color: #173b2b;
+}
+header {
+  background: #087443;
+  color: white;
+  text-align: center;
+  padding: 15px;
+}
+main {
+  max-width: 900px;
+  margin: auto;
+  padding: 15px;
+}
+input, button {
+  padding: 12px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+input {
+  width: 100%;
+  margin-bottom: 8px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+}
+button {
+  cursor: pointer;
+  background: #087443;
+  color: white;
+  border: 0;
+  border-radius: 5px;
+}
+#results button {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+  text-align: left;
+}
+#map {
+  height: 65vh;
+  min-height: 350px;
+  border: 2px solid #087443;
+  border-radius: 8px;
+}
+#status {
+  background: white;
+  padding: 10px;
+  border-radius: 5px;
+}
 </style>
 </head>
 
 <body>
 <header>
-<h2>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h2>
-<p>উপজেলা খুঁজুন, মানচিত্রে নির্বাচন করুন</p>
+  <h2>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h2>
+  <p>উপজেলা সার্চ করুন ও মানচিত্রে নির্বাচন করুন</p>
 </header>
 
 <main>
-<input id="search" placeholder="উপজেলার নাম লিখুন...">
-<div id="results"></div>
-<p id="status">উপজেলার মানচিত্র লোড হচ্ছে...</p>
-<div id="map"></div>
+  <input id="search" placeholder="উপজেলার নাম ইংরেজিতে লিখুন, যেমন Gopalganj">
+  <div id="results"></div>
+  <p id="status">উপজেলার ডেটা লোড হচ্ছে...</p>
+  <div id="map"></div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+const statusBox = document.getElementById('status');
+const searchBox = document.getElementById('search');
+const resultsBox = document.getElementById('results');
+
 const map = L.map('map').setView([23.8, 90.3], 7);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-const status = document.getElementById('status');
-const results = document.getElementById('results');
-const search = document.getElementById('search');
-
 let geoLayer = null;
 let allFeatures = [];
-let selectedFeature = null;
 
-function upazilaName(feature) {
-  const p = feature.properties || {};
-  return p.ADM3_EN || p.ADM3_BN ||
-         p.NAME_3 || p.name || p.NAME ||
-         p.upazila || p.shapeName || 'নাম পাওয়া যায়নি';
+function getProperties(feature) {
+  return feature.properties || {};
 }
 
-function normalise(text) {
-  return String(text).toLowerCase().trim();
+function getName(feature) {
+  const p = getProperties(feature);
+
+  // প্রচলিত নামের ফিল্ডগুলো আগে পরীক্ষা করা হবে।
+  const preferred = [
+    'ADM3_EN', 'ADM3_BN',
+    'NAME_3', 'NAME3',
+    'Upazila', 'UPAZILA',
+    'Upozila', 'UPOZILA',
+    'upazila', 'uzila',
+    'name', 'NAME',
+    'shapeName'
+  ];
+
+  for (const key of preferred) {
+    if (p[key] != null && String(p[key]).trim()) {
+      return String(p[key]).trim();
+    }
+  }
+
+  // অন্য কোনো ফিল্ডে নাম থাকলে সেটিও খোঁজা হবে।
+  for (const [key, value] of Object.entries(p)) {
+    if (/upazila|upozila|uzila|name/i.test(key) &&
+        typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
 }
 
 function selectUpazila(feature) {
   if (!geoLayer) return;
-
-  selectedFeature = feature;
 
   geoLayer.eachLayer(layer => {
     geoLayer.resetStyle(layer);
@@ -78,48 +142,74 @@ function selectUpazila(feature) {
       });
 
       map.fitBounds(layer.getBounds());
+      layer.openTooltip();
     }
   });
 
-  status.textContent = 'নির্বাচিত উপজেলা: ' + upazilaName(feature);Gopalganj
+  const name = getName(feature);
+  statusBox.textContent = name
+    ? 'নির্বাচিত উপজেলা: ' + name
+    : 'উপজেলা নির্বাচন করা হয়েছে।';
 }
 
-search.addEventListener('input', function() {
+function normalise(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '');
+}
+
+searchBox.addEventListener('input', function() {
   const query = normalise(this.value);
-  results.innerHTML = '';
+  resultsBox.innerHTML = '';
 
   if (!query) return;
 
+  if (allFeatures.length === 0) {
+    resultsBox.textContent = 'উপজেলার ডেটা এখনো লোড হয়নি।';
+    return;
+  }
+
   const matches = allFeatures.filter(feature =>
-    normalise(upazilaName(feature)).includes(query)
-  ).slice(0, 15);
+    normalise(getName(feature)).includes(query)
+  ).slice(0, 20);
 
   if (matches.length === 0) {
-    results.textContent = 'উপজেলা পাওয়া যায়নি। ইংরেজি নামেও চেষ্টা করুন।';
+    resultsBox.textContent =
+      'নাম পাওয়া যায়নি। ইংরেজি বানান দিয়ে চেষ্টা করুন।';
     return;
   }
 
   matches.forEach(feature => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = upazilaName(feature);
+    button.textContent = getName(feature) || 'নাম পাওয়া যায়নি';
 
-    button.onclick = () => {
+    button.addEventListener('click', () => {
       selectUpazila(feature);
-      results.innerHTML = '';
-    };
+      resultsBox.innerHTML = '';
+    });
 
-    results.appendChild(button);
+    resultsBox.appendChild(button);
   });
 });
 
-fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json')
+const dataUrl =
+  'https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json';
+
+fetch(dataUrl)
   .then(response => {
-    if (!response.ok) throw new Error('উপজেলার ডেটা লোড হয়নি');
+    if (!response.ok) {
+      throw new Error('ডেটা ফাইল পাওয়া যায়নি: HTTP ' + response.status);
+    }
     return response.json();
   })
   .then(data => {
-    allFeatures = data.features || [];
+    if (!data.features || !data.features.length) {
+      throw new Error('ডেটা ফাইলে কোনো উপজেলা পাওয়া যায়নি।');
+    }
+
+    allFeatures = data.features;
 
     geoLayer = L.geoJSON(data, {
       style: {
@@ -128,26 +218,25 @@ fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/
         fillColor: '#b8dfc8',
         fillOpacity: 0.45
       },
-
       onEachFeature: (feature, layer) => {
-        layer.bindTooltip(upazilaName(feature));
+        const name = getName(feature);
 
-        layer.on('click', () => {
-          selectUpazila(feature);
-        });
+        if (name) layer.bindTooltip(name);
+
+        layer.on('click', () => selectUpazila(feature));
       }
     }).addTo(map);
 
     map.fitBounds(geoLayer.getBounds());
 
-    status.textContent =
-      'মানচিত্র প্রস্তুত! মোট মানচিত্রের সীমানা: ' +
-      allFeatures.length + 'টি। উপজেলা সার্চ করুন।';
+    statusBox.textContent =
+      'মানচিত্র প্রস্তুত। ' + allFeatures.length +
+      'টি সীমানার ডেটা পাওয়া গেছে। এখন উপজেলা সার্চ করুন।';
   })
   .catch(error => {
-    status.textContent =
-      'উপজেলার মানচিত্রের ডেটা লোড হয়নি। ইন্টারনেট পরীক্ষা করে পেজ রিফ্রেশ করুন।';
     console.error(error);
+    statusBox.textContent =
+      'উপজেলার ডেটা লোড হয়নি। ইন্টারনেট বা ডেটা ফাইলের লিংক পরীক্ষা করতে হবে।';
   });
 </script>
 </body>
