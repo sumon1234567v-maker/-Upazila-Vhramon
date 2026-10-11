@@ -98,6 +98,111 @@ document.getElementById('search').addEventListener('input',function(){
   results.appendChild(b);
  });
 });
-</script>
+<script>
+const map = L.map('map').setView([23.8, 90.3], 7);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+let geoLayer;
+let allFeatures = [];
+
+const status = document.getElementById('status');
+const results = document.getElementById('results');
+const search = document.getElementById('search');
+
+function upazilaName(feature) {
+  const p = feature.properties || {};
+  return p.ADM3_EN || p.ADM3_BN ||
+         p.NAME_3 || p.name || p.NAME ||
+         p.upazila || p.shapeName || '';
+}
+
+function normalise(text) {
+  return String(text).toLowerCase().trim();
+}
+
+function selectUpazila(feature) {
+  if (!geoLayer) return;
+
+  geoLayer.eachLayer(layer => {
+    geoLayer.resetStyle(layer);
+
+    if (layer.feature === feature) {
+      layer.setStyle({
+        color: '#006400',
+        fillColor: '#00cc66',
+        fillOpacity: 0.85,
+        weight: 3
+      });
+
+      map.fitBounds(layer.getBounds());
+    }
+  });
+
+  status.textContent = 'নির্বাচিত উপজেলা: ' + upazilaName(feature);
+}
+
+search.addEventListener('input', function() {
+  const query = normalise(this.value);
+  results.innerHTML = '';
+
+  if (!query) return;
+
+  const matches = allFeatures.filter(feature =>
+    normalise(upazilaName(feature)).includes(query)
+  ).slice(0, 15);
+
+  if (matches.length === 0) {
+    results.textContent = 'উপজেলা পাওয়া যায়নি। ইংরেজি নামেও চেষ্টা করুন।';
+    return;
+  }
+
+  matches.forEach(feature => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = upazilaName(feature);
+
+    button.onclick = () => selectUpazila(feature);
+
+    results.appendChild(button);
+  });
+});
+
+status.textContent = 'উপজেলার মানচিত্র লোড হচ্ছে...';
+
+fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json')
+  .then(response => {
+    if (!response.ok) throw new Error('ডেটা লোড হয়নি');
+    return response.json();
+  })
+  .then(data => {
+    allFeatures = data.features || [];
+
+    geoLayer = L.geoJSON(data, {
+      style: {
+        color: '#26734d',
+        weight: 1,
+        fillColor: '#b8dfc8',
+        fillOpacity: 0.45
+      },
+      onEachFeature: (feature, layer) => {
+        layer.on('click', () => selectUpazila(feature));
+        layer.bindTooltip(upazilaName(feature));
+      }
+    }).addTo(map);
+
+    map.fitBounds(geoLayer.getBounds());
+    status.textContent =
+      'মানচিত্র প্রস্তুত। উপজেলা সার্চ করুন। মোট সীমানা: ' +
+      allFeatures.length;
+  })
+  .catch(error => {
+    status.textContent =
+      'উপজেলার ডেটা লোড হয়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।';
+    console.error(error);
+  });
+</script></script>
 </body>
 </html>
