@@ -1,475 +1,227 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>বাংলাদেশ উপজেলা ভ্রমণ</title>
 
-  <title>আমার উপজেলা ভ্রমণ মানচিত্র</title>
+<link rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  >
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f1f5f1;
-      color: #183b2b;
-    }
-
-    header {
-      padding: 20px 12px;
-      background: #08783e;
-      color: white;
-      text-align: center;
-    }
-
-    header h2 {
-      margin: 0 0 8px;
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: auto;
-      padding: 12px;
-    }
-
-    .card {
-      background: white;
-      padding: 14px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 7px #00000010;
-    }
-
-    #search {
-      width: 100%;
-      padding: 13px;
-      font-size: 16px;
-      border: 1px solid #aaa;
-      border-radius: 8px;
-    }
-
-    #results {
-      max-height: 220px;
-      overflow-y: auto;
-    }
-
-    .result {
-      padding: 12px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-
-    .result:hover {
-      background: #e2f5e8;
-    }
-
-    .stats {
-      display: flex;
-      gap: 10px;
-      text-align: center;
-    }
-
-    .stat {
-      flex: 1;
-      background: #e4f5e9;
-      padding: 14px 5px;
-      border-radius: 8px;
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 23px;
-      margin-bottom: 5px;
-    }
-
-    button {
-      padding: 11px 14px;
-      border: 0;
-      border-radius: 7px;
-      cursor: pointer;
-      font-size: 15px;
-      margin-top: 8px;
-    }
-
-    .green {
-      background: #08783e;
-      color: white;
-    }
-
-    .gray {
-      background: #e5e7eb;
-      color: #222;
-    }
-
-    #map {
-      width: 100%;
-      height: 65vh;
-      min-height: 400px;
-      border-radius: 10px;
-    }
-
-    #status {
-      font-size: 14px;
-      line-height: 1.7;
-    }
-
-    .hint {
-      color: #555;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-  </style>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f7f2;color:#183b2b}
+header{background:#08783e;color:white;text-align:center;padding:18px 10px}
+main{max-width:1000px;margin:auto;padding:12px}
+.card{background:white;padding:14px;margin-bottom:12px;border-radius:10px}
+input{width:100%;padding:13px;font-size:16px;border:1px solid #aaa;border-radius:8px}
+#results{max-height:220px;overflow:auto}
+.result{padding:12px;border-bottom:1px solid #ddd;cursor:pointer}
+.result:hover{background:#e0f5e8}
+.stats{display:flex;gap:8px;text-align:center}
+.stat{flex:1;padding:12px 3px;background:#e3f4e8;border-radius:8px}
+.stat strong{display:block;font-size:22px}
+button{padding:11px;margin:6px 4px 0 0;border:0;border-radius:7px;font-size:15px}
+.green{background:#08783e;color:white}
+#map{height:65vh;min-height:400px;border-radius:8px}
+#status{font-size:14px;line-height:1.6}
+</style>
 </head>
 
 <body>
-
 <header>
-  <h2>🇧🇩 আমার উপজেলা ভ্রমণ</h2>
-  <div>উপজেলা খুঁজুন, নির্বাচন করুন এবং ভ্রমণের হিসাব রাখুন</div>
+<h2>🇧🇩 আমার উপজেলা ভ্রমণ</h2>
+বাংলাদেশের উপজেলা খুঁজুন ও ভ্রমণের হিসাব রাখুন
 </header>
 
-<div class="container">
-
-  <div class="card">
-    <input
-      id="search"
-      type="search"
-      placeholder="উপজেলার নাম লিখুন (বাংলা বা English)"
-      autocomplete="off"
-    >
-    <div id="results"></div>
-    <p class="hint">
-      নামের কিছু অংশ লিখলেও খুঁজবে। ফলাফলে চাপ দিলে মানচিত্রে সেই উপজেলা দেখাবে।
-    </p>
-  </div>
-
-  <div class="card">
-    <div class="stats">
-      <div class="stat">
-        <strong id="visitedCount">0</strong>
-        ভ্রমণ করেছি
-      </div>
-      <div class="stat">
-        <strong id="remainingCount">—</strong>
-        বাকি
-      </div>
-      <div class="stat">
-        <strong id="totalCount">—</strong>
-        মোট পাওয়া গেছে
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div id="status">উপজেলার মানচিত্র লোড হচ্ছে...</div>
-    <button class="green" id="markVisited" disabled>
-      ✅ ভ্রমণ করেছি
-    </button>
-    <button class="gray" id="unmarkVisited" disabled>
-      ↩ ভ্রমণের চিহ্ন সরাও
-    </button>
-    <p class="hint">
-      সবুজ গাঢ় রং = ভ্রমণ করা উপজেলা। হালকা সবুজ = অন্য উপজেলা।
-      ভ্রমণের তালিকা এই ব্রাউজারে সংরক্ষিত হবে।
-    </p>
-  </div>
-
-  <div class="card">
-    <div id="map"></div>
-  </div>
-
+<main>
+<div class="card">
+<input id="search" placeholder="উপজেলার নাম লিখুন — যেমন Dhaka">
+<div id="results"></div>
 </div>
 
+<div class="card">
+<div class="stats">
+<div class="stat"><strong id="visitedCount">0</strong>ভ্রমণ করেছি</div>
+<div class="stat"><strong id="remainingCount">—</strong>বাকি</div>
+<div class="stat"><strong id="totalCount">0</strong>মোট উপজেলা</div>
+</div>
+</div>
+
+<div class="card">
+<div id="status">মানচিত্রের ডেটা লোড হচ্ছে...</div>
+<button id="mark" class="green" disabled>✅ ভ্রমণ করেছি</button>
+<button id="unmark" disabled>↩ চিহ্ন সরাও</button>
+</div>
+
+<div class="card"><div id="map"></div></div>
+</main>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-(() => {
-  const map = L.map("map").setView([23.685, 90.3563], 7);
+const map=L.map('map').setView([23.685,90.3563],7);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-    maxZoom: 18
-  }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+ attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-  const search = document.getElementById("search");
-  const results = document.getElementById("results");
-  const status = document.getElementById("status");
-  const visitedCount = document.getElementById("visitedCount");
-  const remainingCount = document.getElementById("remainingCount");
-  const totalCount = document.getElementById("totalCount");
-  const markButton = document.getElementById("markVisited");
-  const unmarkButton = document.getElementById("unmarkVisited");
+const $=id=>document.getElementById(id);
+let features=[],geoLayer=null,selected=null;
+let visited=new Set();
 
-  let features = [];
-  let geoLayer = null;
-  let selectedLayer = null;
-  let selectedKey = null;
+try{
+ visited=new Set(JSON.parse(localStorage.getItem('bdVisited')||'[]'));
+}catch(e){}
 
-  const visited = new Set(
-    JSON.parse(localStorage.getItem("upazilaVisited") || "[]")
-  );
+function getName(f){
+ const p=f.properties||{};
+ const keys=[
+  'ADM3_EN','ADM3_NAME','ADM3','NAME_3','NAME3',
+  'UPAZILA','Upazila','upazila','name','NAME',
+  'ADM3_BN','NAME_2','shapeName','Name'
+ ];
+ for(const k of keys){
+  if(p[k]!==undefined && String(p[k]).trim())return String(p[k]).trim();
+ }
+ return '';
+}
 
-  function getName(feature) {
-    const p = feature.properties || {};
+function getKey(f){
+ const p=f.properties||{};
+ return String(p.ADM3_PCODE||p.ADM3_CODE||p.GID_3||p.ID_3||getName(f)).toLowerCase();
+}
 
-    return String(
-      p.ADM3_EN ||
-      p.ADM3_NAME ||
-      p.UPAZILA ||
-      p.Upazila ||
-      p.upazila ||
-      p.NAME_3 ||
-      p.name ||
-      p.NAME ||
-      p.ADM3 ||
-      p.NAME3 ||
-      p.ADM3_BN ||
-      ""
-    ).trim();
+function norm(s){
+ return String(s||'').toLowerCase().normalize('NFD')
+ .replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]/g,'');
+}
+
+function style(f){
+ const yes=visited.has(getKey(f));
+ return {
+  color:yes?'#075c32':'#668875',
+  weight:yes?1.5:1,
+  fillColor:yes?'#00c853':'#d9eadf',
+  fillOpacity:yes?.8:.5
+ };
+}
+
+function stats(){
+ $('visitedCount').textContent=visited.size;
+ $('totalCount').textContent=features.length;
+ $('remainingCount').textContent=Math.max(0,features.length-visited.size);
+}
+
+function save(){
+ localStorage.setItem('bdVisited',JSON.stringify([...visited]));
+ stats();
+ if(geoLayer)geoLayer.eachLayer(l=>l.setStyle(style(l.feature)));
+}
+
+function select(f,l){
+ if(selected&&geoLayer)selected.setStyle(style(selected.feature));
+ selected=l;
+ l.setStyle({color:'#006b35',weight:3,fillColor:'#00e676',fillOpacity:.9});
+ l.bringToFront();
+ map.fitBounds(l.getBounds(),{padding:[20,20],maxZoom:11});
+ $('status').textContent='নির্বাচিত উপজেলা: '+(getName(f)||'নাম পাওয়া যায়নি');
+ $('mark').disabled=false;
+ $('unmark').disabled=false;
+}
+
+function searchNames(q){
+ $('results').replaceChildren();
+ if(!q.trim())return;
+
+ const needle=norm(q);
+ const matches=features.filter(f=>{
+  const p=f.properties||{};
+  const text=[getName(f),p.ADM3_BN,p.ADM3_EN,p.NAME_3,
+   p.ADM2_EN,p.DISTRICT,p.DISTRICT_EN,p.DISTRICT_BN]
+   .filter(Boolean).join(' ');
+  return norm(text).includes(needle);
+ }).slice(0,40);
+
+ if(!matches.length){
+  const d=document.createElement('div');
+  d.className='result';
+  d.textContent='নাম পাওয়া যায়নি।';
+  $('results').appendChild(d);
+  return;
+ }
+
+ matches.forEach(f=>{
+  const d=document.createElement('div');
+  d.className='result';
+  d.textContent=getName(f)||'নাম নেই';
+  d.onclick=()=>{
+   const l=geoLayer.getLayers().find(x=>x.feature===f);
+   if(l){
+    select(f,l);
+    $('search').value=getName(f);
+    $('results').replaceChildren();
+   }
+  };
+  $('results').appendChild(d);
+ });
+}
+
+$('search').addEventListener('input',e=>searchNames(e.target.value));
+
+$('mark').onclick=()=>{
+ if(!selected)return;
+ visited.add(getKey(selected.feature));
+ save();
+ $('status').textContent='ভ্রমণের তালিকায় যোগ হয়েছে: '+getName(selected.feature);
+};
+
+$('unmark').onclick=()=>{
+ if(!selected)return;
+ visited.delete(getKey(selected.feature));
+ save();
+ $('status').textContent='ভ্রমণের চিহ্ন সরানো হয়েছে: '+getName(selected.feature);
+};
+
+async function load(){
+ const urls=[
+ 'https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json',
+ 'https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/master/small/small_bangladesh_geojson_adm3_492_upozila.json'
+ ];
+
+ let data=null,lastError=null;
+
+ for(const url of urls){
+  try{
+   const r=await fetch(url);
+   if(!r.ok)throw Error('HTTP '+r.status);
+   const j=await r.json();
+   if(!j.features||!j.features.length)throw Error('ডেটা খালি');
+   data=j;
+   break;
+  }catch(e){lastError=e;}
+ }
+
+ if(!data){
+  console.error(lastError);
+  $('status').textContent='উপজেলার ডেটা লোড হয়নি। ইন্টারনেট বা ডেটা লিংকে সমস্যা হয়েছে।';
+  return;
+ }
+
+ features=data.features;
+ geoLayer=L.geoJSON(data,{
+  style:style,
+  onEachFeature:(f,l)=>{
+   l.bindTooltip(getName(f)||'উপজেলা',{sticky:true});
+   l.on('click',()=>select(f,l));
   }
+ }).addTo(map);
 
-  function getKey(feature) {
-    const p = feature.properties || {};
-    return String(
-      p.ADM3_PCODE ||
-      p.ADM3_CODE ||
-      p.GID_3 ||
-      p.ID_3 ||
-      p.id ||
-      getName(feature)
-    ).trim().toLowerCase();
-  }
+ map.fitBounds(geoLayer.getBounds());
+ stats();
+ $('status').textContent='মানচিত্র লোড হয়েছে। '+features.length+'টি এলাকার ডেটা পাওয়া গেছে। এখন সার্চ করুন।';
+}
 
-  function normalise(text) {
-    return String(text || "")
-      .toLocaleLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[\s_-]+/g, "");
-  }
-
-  function styleFor(feature) {
-    const isVisited = visited.has(getKey(feature));
-
-    return {
-      color: isVisited ? "#075c32" : "#668875",
-      weight: isVisited ? 1.5 : 1,
-      fillColor: isVisited ? "#00c853" : "#d9eadf",
-      fillOpacity: isVisited ? 0.8 : 0.5
-    };
-  }
-
-  function updateStats() {
-    visitedCount.textContent = visited.size;
-    totalCount.textContent = features.length;
-    remainingCount.textContent =
-      Math.max(0, features.length - visited.size);
-  }
-
-  function saveVisited() {
-    localStorage.setItem(
-      "upazilaVisited",
-      JSON.stringify([...visited])
-    );
-    updateStats();
-
-    if (geoLayer) {
-      geoLayer.eachLayer(layer => {
-        layer.setStyle(styleFor(layer.feature));
-      });
-    }
-  }
-
-  function selectLayer(feature, layer) {
-    if (selectedLayer && geoLayer) {
-      selectedLayer.setStyle(styleFor(selectedLayer.feature));
-    }
-
-    selectedLayer = layer;
-    selectedKey = getKey(feature);
-
-    layer.setStyle({
-      color: "#006b35",
-      weight: 3,
-      fillColor: "#00e676",
-      fillOpacity: 0.9
-    });
-
-    layer.bringToFront();
-
-    map.fitBounds(layer.getBounds(), {
-      padding: [20, 20],
-      maxZoom: 11
-    });
-
-    const name = getName(feature) || "নাম পাওয়া যায়নি";
-
-    status.textContent = "নির্বাচিত উপজেলা: " + name;
-
-    markButton.disabled = false;
-    unmarkButton.disabled = false;
-  }
-
-  function showResults(query) {
-    results.replaceChildren();
-
-    if (!query.trim()) return;
-
-    const q = normalise(query);
-
-    const matches = features.filter(feature => {
-      const p = feature.properties || {};
-
-      const searchable = [
-        getName(feature),
-        p.ADM3_BN,
-        p.ADM3_EN,
-        p.NAME_3,
-        p.NAME_2,
-        p.DISTRICT,
-        p.DISTRICT_EN,
-        p.DISTRICT_BN
-      ].filter(Boolean).join(" ");
-
-      return normalise(searchable).includes(q);
-    }).slice(0, 40);
-
-    if (!matches.length) {
-      const empty = document.createElement("div");
-      empty.className = "result";
-      empty.textContent =
-        "কোনো ফলাফল পাওয়া যায়নি। ইংরেজি বানান দিয়ে চেষ্টা করুন।";
-      results.appendChild(empty);
-      return;
-    }
-
-    matches.forEach(feature => {
-      const item = document.createElement("div");
-      item.className = "result";
-
-      const p = feature.properties || {};
-      const name = getName(feature);
-
-      item.textContent = name +
-        (p.ADM2_EN ? " — " + p.ADM2_EN : "");
-
-      item.addEventListener("click", () => {
-        const layer = geoLayer.getLayers().find(
-          l => l.feature === feature
-        );
-
-        if (!layer) return;
-
-        selectLayer(feature, layer);
-        search.value = name;
-        results.replaceChildren();
-      });
-
-      results.appendChild(item);
-    });
-  }
-
-  search.addEventListener("input", () => {
-    showResults(search.value);
-  });
-
-  markButton.addEventListener("click", () => {
-    if (!selectedKey) return;
-
-    visited.add(selectedKey);
-    saveVisited();
-
-    status.textContent =
-      "✅ ভ্রমণ করা হয়েছে: " + search.value;
-  });
-
-  unmarkButton.addEventListener("click", () => {
-    if (!selectedKey) return;
-
-    visited.delete(selectedKey);
-    saveVisited();
-
-    status.textContent =
-      "ভ্রমণের চিহ্ন সরানো হয়েছে: " + search.value;
-  });
-
-  async function loadMap() {
-    const urls = [
-      "https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json",
-      "https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/master/small/small_bangladesh_geojson_adm3_492_upozila.json"
-    ];
-
-    let data = null;
-    let lastError = null;
-
-    for (const url of urls) {
-      try {
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error("HTTP " + response.status);
-        }
-
-        const json = await response.json();
-
-        if (!json.features || !json.features.length) {
-          throw new Error("কোনো মানচিত্রের ডেটা নেই");
-        }
-
-        data = json;
-        break;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    if (!data) {
-      console.error(lastError);
-
-      status.textContent =
-        "ডেটা লোড হয়নি। ইন্টারনেট বা মানচিত্রের ডেটার লিংকে সমস্যা হয়েছে।";
-
-      return;
-    }
-
-    features = data.features;
-
-    geoLayer = L.geoJSON(data, {
-      style: styleFor,
-
-      onEachFeature: (feature, layer) => {
-        const name = getName(feature);
-
-        layer.bindTooltip(name || "উপজেলা", {
-          sticky: true
-        });
-
-        layer.on("click", () => {
-          selectLayer(feature, layer);
-        });
-      }
-    }).addTo(map);
-
-    map.fitBounds(geoLayer.getBounds());
-
-    updateStats();
-
-    status.textContent =
-      "মানচিত্র লোড হয়েছে। " + features.length +
-      "টি এলাকার ডেটা পাওয়া গেছে। এখন উপজেলা সার্চ করুন।";
-  }
-
-  loadMap();
-})();
+load();
 </script>
-
 </body>
 </html>
