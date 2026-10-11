@@ -2,77 +2,102 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>আমার বাংলাদেশ ভ্রমণ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>বাংলাদেশ উপজেলা ভ্রমণ মানচিত্র</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-body{font-family:Arial,sans-serif;background:#f0f7f2;margin:0;color:#173b2b}
-header{background:#087443;color:white;text-align:center;padding:25px 12px}
-main{max-width:700px;margin:20px auto;padding:15px}
-.box{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px #ccc}
-input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0;border-radius:7px;font-size:16px}
-input{border:1px solid #aaa}
-button{background:#087443;color:white;border:0;cursor:pointer}
-.item{padding:12px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:10px}
-.item input{width:20px;margin:0}
-.small{color:#555;font-size:14px}
+body{font-family:Arial,sans-serif;margin:0;background:#f0f7f2}
+header{background:#087443;color:white;text-align:center;padding:15px}
+main{max-width:900px;margin:auto;padding:15px}
+input,button{padding:12px;font-size:16px;box-sizing:border-box}
+input{width:100%;margin-bottom:8px}
+button{cursor:pointer;background:#087443;color:white;border:0;border-radius:5px}
+#map{height:65vh;min-height:350px;border:2px solid #087443;border-radius:8px}
+#results button{display:block;width:100%;margin:4px 0;text-align:left}
 </style>
 </head>
 <body>
 <header>
-<h1>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h1>
-<p>উপজেলা ভ্রমণের হিসাব রাখুন</p>
+<h2>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h2>
+<p>উপজেলা খুঁজুন, মানচিত্রে নির্বাচন করুন</p>
 </header>
 <main>
-<div class="box">
-<h2>আমার ভ্রমণ তালিকা</h2>
-<p class="small">উপজেলার নাম লিখে যোগ করুন। ভ্রমণ করা হলে টিক দিন।</p>
-<input id="name" placeholder="উপজেলার নাম লিখুন">
-<button onclick="addPlace()">উপজেলা যোগ করুন</button>
-<input id="search" placeholder="তালিকায় খুঁজুন..." oninput="showPlaces()">
-<p id="count">ভ্রমণ করেছেন: ০টি</p>
-<div id="list"></div>
-<button onclick="clearAll()">তালিকা মুছুন</button>
-<p class="small">এই প্রাথমিক সংস্করণে তালিকা এই ব্রাউজারেই সংরক্ষিত হবে।</p>
-</div>
+<input id="search" placeholder="উপজেলার নাম লিখুন">
+<div id="results"></div>
+<p id="status">মানচিত্র লোড হচ্ছে...</p>
+<div id="map"></div>
 </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-let places=JSON.parse(localStorage.getItem("travelPlaces")||"[]");
-function save(){localStorage.setItem("travelPlaces",JSON.stringify(places));showPlaces();}
-function addPlace(){
-let input=document.getElementById("name");
-let name=input.value.trim();
-if(!name){alert("উপজেলার নাম লিখুন");return;}
-if(places.some(p=>p.name===name)){alert("এই নামটি তালিকায় আছে");return;}
-places.push({name:name,visited:false});
-input.value="";
-save();
-}
-function showPlaces(){
-let q=document.getElementById("search").value.trim().toLowerCase();
-let list=document.getElementById("list");
-list.innerHTML="";
-places.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
-let row=document.createElement("div");
-row.className="item";
-let check=document.createElement("input");
-check.type="checkbox";
-check.checked=p.visited;
-check.onchange=()=>{p.visited=check.checked;save();};
-let label=document.createElement("span");
-label.textContent=p.name;
-if(p.visited)label.style.textDecoration="line-through";
-row.append(check,label);
-list.appendChild(row);
+const map=L.map('map').setView([23.8,90.3],7);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+let layer;
+let features=[];
+
+fetch('https://raw.githubusercontent.com/zahedulshohan/bangladesh-geojson/master/bd-upazila.json')
+.then(r=>{
+ if(!r.ok) throw Error('ডেটা পাওয়া যায়নি');
+ return r.json();
+})
+.then(data=>{
+ features=data.features||[];
+ layer=L.geoJSON(data,{
+ style:()=>({color:'#26734d',weight:1,fillColor:'#b8dfc8',fillOpacity:0.45}),
+ onEachFeature:(feature,polygon)=>{
+  polygon.on('click',()=>{
+   map.fitBounds(polygon.getBounds());
+   polygon.setStyle({fillColor:'#00a651',fillOpacity:0.8,weight:3});
+   document.getElementById('status').textContent=
+   'নির্বাচিত উপজেলা: '+getName(feature);
+  });
+ }
+ }).addTo(map);
+ document.getElementById('status').textContent=
+ 'মানচিত্র প্রস্তুত। উপজেলা খুঁজতে উপরে নাম লিখুন।';
+})
+.catch(()=>{
+ document.getElementById('status').textContent=
+ 'উপজেলার সীমানার ডেটা লোড হয়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।';
 });
-document.getElementById("count").textContent=
-"ভ্রমণ করেছেন: "+places.filter(p=>p.visited).length+"টি / মোট "+places.length+"টি";
+
+function getName(f){
+ const p=f.properties||{};
+ return p.name||p.NAME_3||p.NAME||p.upazila||'নাম পাওয়া যায়নি';
 }
-function clearAll(){
-if(confirm("আপনার সব যোগ করা উপজেলা মুছবেন?")){
-places=[];save();
-}
-}
-showPlaces();
+
+document.getElementById('search').addEventListener('input',function(){
+ const q=this.value.trim().toLowerCase();
+ const results=document.getElementById('results');
+ results.innerHTML='';
+ if(!q)return;
+
+ features.filter(f=>getName(f).toLowerCase().includes(q))
+ .slice(0,10).forEach(f=>{
+  const b=document.createElement('button');
+  b.textContent=getName(f);
+  b.onclick=()=>{
+   if(layer){
+    layer.eachLayer(p=>{
+     if(p.feature===f){
+      layer.resetStyle(p);
+      p.setStyle({fillColor:'#00a651',fillOpacity:0.8,weight:3});
+      map.fitBounds(p.getBounds());
+      document.getElementById('status').textContent=
+      'নির্বাচিত উপজেলা: '+getName(f);
+     }else{
+      layer.resetStyle(p);
+     }
+    });
+   }
+  };
+  results.appendChild(b);
+ });
+});
 </script>
 </body>
 </html>
