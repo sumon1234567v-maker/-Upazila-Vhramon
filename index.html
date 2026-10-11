@@ -4,100 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>বাংলাদেশ উপজেলা ভ্রমণ মানচিত্র</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#f0f7f2}
+body{font-family:Arial,sans-serif;margin:0;background:#f0f7f2;color:#173b2b}
 header{background:#087443;color:white;text-align:center;padding:15px}
 main{max-width:900px;margin:auto;padding:15px}
 input,button{padding:12px;font-size:16px;box-sizing:border-box}
-input{width:100%;margin-bottom:8px}
+input{width:100%;margin-bottom:8px;border:1px solid #aaa;border-radius:5px}
 button{cursor:pointer;background:#087443;color:white;border:0;border-radius:5px}
-#map{height:65vh;min-height:350px;border:2px solid #087443;border-radius:8px}
 #results button{display:block;width:100%;margin:4px 0;text-align:left}
+#map{height:65vh;min-height:350px;border:2px solid #087443;border-radius:8px}
+#status{background:white;padding:10px;border-radius:5px}
 </style>
 </head>
+
 <body>
 <header>
 <h2>🇧🇩 আমার বাংলাদেশ ভ্রমণ</h2>
 <p>উপজেলা খুঁজুন, মানচিত্রে নির্বাচন করুন</p>
 </header>
+
 <main>
-<input id="search" placeholder="উপজেলার নাম লিখুন">
+<input id="search" placeholder="উপজেলার নাম লিখুন...">
 <div id="results"></div>
-<p id="status">মানচিত্র লোড হচ্ছে...</p>
+<p id="status">উপজেলার মানচিত্র লোড হচ্ছে...</p>
 <div id="map"></div>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-const map=L.map('map').setView([23.8,90.3],7);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:'&copy; OpenStreetMap contributors'
-}).addTo(map);
-
-let layer;
-let features=[];
-
-fetch('https://raw.githubusercontent.com/zahedulshohan/bangladesh-geojson/master/bd-upazila.json')
-.then(r=>{
- if(!r.ok) throw Error('ডেটা পাওয়া যায়নি');
- return r.json();
-})
-.then(data=>{
- features=data.features||[];
- layer=L.geoJSON(data,{
- style:()=>({color:'#26734d',weight:1,fillColor:'#b8dfc8',fillOpacity:0.45}),
- onEachFeature:(feature,polygon)=>{
-  polygon.on('click',()=>{
-   map.fitBounds(polygon.getBounds());
-   polygon.setStyle({fillColor:'#00a651',fillOpacity:0.8,weight:3});
-   document.getElementById('status').textContent=
-   'নির্বাচিত উপজেলা: '+getName(feature);
-  });
- }
- }).addTo(map);
- document.getElementById('status').textContent=
- 'মানচিত্র প্রস্তুত। উপজেলা খুঁজতে উপরে নাম লিখুন।';
-})
-.catch(()=>{
- document.getElementById('status').textContent=
- 'উপজেলার সীমানার ডেটা লোড হয়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন।';
-});
-
-function getName(f){
- const p=f.properties||{};
- return p.name||p.NAME_3||p.NAME||p.upazila||'নাম পাওয়া যায়নি';
-}
-
-document.getElementById('search').addEventListener('input',function(){
- const q=this.value.trim().toLowerCase();
- const results=document.getElementById('results');
- results.innerHTML='';
- if(!q)return;
-
- features.filter(f=>getName(f).toLowerCase().includes(q))
- .slice(0,10).forEach(f=>{
-  const b=document.createElement('button');
-  b.textContent=getName(f);
-  b.onclick=()=>{
-   if(layer){
-    layer.eachLayer(p=>{
-     if(p.feature===f){
-      layer.resetStyle(p);
-      p.setStyle({fillColor:'#00a651',fillOpacity:0.8,weight:3});
-      map.fitBounds(p.getBounds());
-      document.getElementById('status').textContent=
-      'নির্বাচিত উপজেলা: '+getName(f);
-     }else{
-      layer.resetStyle(p);
-     }
-    });
-   }
-  };
-  results.appendChild(b);
- });
-});
 <script>
 const map = L.map('map').setView([23.8, 90.3], 7);
 
@@ -105,18 +42,19 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-let geoLayer;
-let allFeatures = [];
-
 const status = document.getElementById('status');
 const results = document.getElementById('results');
 const search = document.getElementById('search');
+
+let geoLayer = null;
+let allFeatures = [];
+let selectedFeature = null;
 
 function upazilaName(feature) {
   const p = feature.properties || {};
   return p.ADM3_EN || p.ADM3_BN ||
          p.NAME_3 || p.name || p.NAME ||
-         p.upazila || p.shapeName || '';
+         p.upazila || p.shapeName || 'নাম পাওয়া যায়নি';
 }
 
 function normalise(text) {
@@ -125,6 +63,8 @@ function normalise(text) {
 
 function selectUpazila(feature) {
   if (!geoLayer) return;
+
+  selectedFeature = feature;
 
   geoLayer.eachLayer(layer => {
     geoLayer.resetStyle(layer);
@@ -164,17 +104,18 @@ search.addEventListener('input', function() {
     button.type = 'button';
     button.textContent = upazilaName(feature);
 
-    button.onclick = () => selectUpazila(feature);
+    button.onclick = () => {
+      selectUpazila(feature);
+      results.innerHTML = '';
+    };
 
     results.appendChild(button);
   });
 });
 
-status.textContent = 'উপজেলার মানচিত্র লোড হচ্ছে...';
-
 fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/main/small/small_bangladesh_geojson_adm3_492_upozila.json')
   .then(response => {
-    if (!response.ok) throw new Error('ডেটা লোড হয়নি');
+    if (!response.ok) throw new Error('উপজেলার ডেটা লোড হয়নি');
     return response.json();
   })
   .then(data => {
@@ -187,22 +128,27 @@ fetch('https://raw.githubusercontent.com/yasserius/bangladesh_geojson_shapefile/
         fillColor: '#b8dfc8',
         fillOpacity: 0.45
       },
+
       onEachFeature: (feature, layer) => {
-        layer.on('click', () => selectUpazila(feature));
         layer.bindTooltip(upazilaName(feature));
+
+        layer.on('click', () => {
+          selectUpazila(feature);
+        });
       }
     }).addTo(map);
 
     map.fitBounds(geoLayer.getBounds());
+
     status.textContent =
-      'মানচিত্র প্রস্তুত। উপজেলা সার্চ করুন। মোট সীমানা: ' +
-      allFeatures.length;
+      'মানচিত্র প্রস্তুত! মোট মানচিত্রের সীমানা: ' +
+      allFeatures.length + 'টি। উপজেলা সার্চ করুন।';
   })
   .catch(error => {
     status.textContent =
-      'উপজেলার ডেটা লোড হয়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।';
+      'উপজেলার মানচিত্রের ডেটা লোড হয়নি। ইন্টারনেট পরীক্ষা করে পেজ রিফ্রেশ করুন।';
     console.error(error);
   });
-</script></script>
+</script>
 </body>
 </html>
