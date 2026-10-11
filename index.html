@@ -224,4 +224,33 @@ async function load(){
 load();
 </script>
 </body>
-</html>
+</html># Python >= 3.7
+import ogr
+import json
+
+def shp2json(shp_path):
+  """
+  Convert SHP files to GeoJSON with OGR.
+  Outputs JSON file to same directory as the SHP files.
+  
+  Input:
+    - shp_path (str):
+        e.g. "D:/somewhere/bangladesh.shp"
+  """
+  driver = ogr.GetDriverByName('ESRI Shapefile')
+  data_source = driver.Open(shp_path, 0)
+
+  fc = {
+      'type': 'FeatureCollection',
+      'features': []
+      }
+
+  lyr = data_source.GetLayer(0)
+  for feature in lyr:    
+      fc['features'].append(feature.ExportToJson(as_object=True))
+
+  output_name = shp_path.split(".")[0] + ".json"
+
+  with open(output_name, 'w') as f:
+      json.dump(fc, f)
+      print("GeoJSON file created: {}".format(output_name))
